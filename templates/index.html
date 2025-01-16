@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Synonyms</title>
+    <script>
+        // async function submitForm(event) {
+        //     event.preventDefault(); // Prevent the default form submission behavior
+
+        //     // Get form data
+        //     const form = document.getElementById("dataForm");
+        //     const formData = new FormData(form);
+
+        //     // Create a dictionary of key-value pairs
+        //     const data = {};
+        //     const rows = document.querySelectorAll("#synonymTable tbody tr");
+        //     rows.forEach((row, index) => {
+        //         const key = row.cells[0].innerText; // Get the first cell's text (Name)
+        //         const synonym = row.querySelector("input[name='synonym']").value; // Get the input value
+        //         data[key] = synonym;
+        //     });
+
+        //     // Send the data to the FastAPI endpoint
+        //     const response = await fetch("/update-synonyms/", {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-Type": "application/json",
+        //         },
+        //         body: JSON.stringify(data),
+        //     });
+
+        //     // Handle the response
+        //     const result = await response.json();
+        //     console.log("Server Response:", result);
+        //     alert("Synonyms updated successfully!");
+        // }
+        async function submitForm(event) {
+    event.preventDefault(); // Prevent the default form submission behavior
+
+    // Get all rows from the table body
+    const rows = document.querySelectorAll("#synonymTable tbody tr");
+
+    // Create a dictionary to store the data
+    const data = {};
+
+    // Iterate through each row to get the value from the last column
+    rows.forEach((row) => {
+        const key = row.cells[0].innerText; // Get the key from the first cell
+        const newSynonymInput = row.querySelector("input[name$='_new_synonym']");
+
+        // Add the value of the editable input box if it exists and is not empty
+        if (newSynonymInput && newSynonymInput.value.trim()) {
+            data[key] = newSynonymInput.value.trim();
+        }
+    });
+
+    // Send the data to the FastAPI endpoint
+    try {
+        const response = await fetch("/update-synonyms/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        // Handle the response
+        const result = await response.json();
+        console.log("Server Response:", result);
+
+        if (response.ok) {
+            alert("Synonyms updated successfully!");
+        } else {
+            alert("Failed to update synonyms: " + (result.error || "Unknown error"));
+        }
+    } catch (error) {
+        console.error("Error submitting form:", error);
+        alert("An error occurred while updating synonyms.");
+    }
+}
+    </script>
+</head>
+<body>
+    <h1>Update Synonyms</h1>
+    <form id="dataForm" onsubmit="submitForm(event)">
+        <table id="synonymTable" border="1">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    {% set max_synonyms = data.values() | map('length') | max %}
+                    {% for i in range(max_synonyms) %}
+                        <th>Synonym{{ i + 1 }}</th>
+                    {% endfor %}
+                    <th>New Synonym</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, values in data.items() %}
+                    <tr>
+                        <td>{{ key }}</td>
+                        {% for value in values %}
+                            <td><input type="text" readonly name="{{ key }}_synonym" value="{{ value }}" placeholder="Enter synonym"></td>
+                        {% endfor %}
+                        <!-- Fill empty cells if there are fewer synonyms than the maximum -->
+                        {% for i in range(max_synonyms - values | length) %}
+                            <td></td>
+                        {% endfor %}
+                        <td><input type="text" name="{{ key }}_new_synonym" placeholder="Enter synonym"></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
